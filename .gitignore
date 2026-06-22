@@ -1,0 +1,23 @@
+# macOS
+.DS_Store
+Thumbs.db
+
+# Backend (gym-ai-api)
+gym-ai-api/venv/
+gym-ai-api/.venv/
+gym-ai-api/env/
+gym-ai-api/.env
+gym-ai-api/*.db
+gym-ai-api/.pytest_cache/
+gym-ai-api/__pycache__/
+gym-ai-api/**/*.pyc
+
+# Frontend (gym-ai-mobile)
+gym-ai-mobile/node_modules/
+gym-ai-mobile/.expo/
+gym-ai-mobile/dist/
+gym-ai-mobile/web-build/
+gym-ai-mobile/expo-env.d.ts
+gym-ai-mobile/.env*.local
+gym-ai-mobile/ios/
+gym-ai-mobile/android/
