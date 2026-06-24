@@ -372,7 +372,7 @@ export default function NutritionScreen() {
                   <Text style={styles.scanBtnText}>Analyzing Plate...</Text>
                 </View>
               ) : (
-                <Text style={styles.scanBtnText}>Scan with GymAI</Text>
+                <Text style={styles.scanBtnText}>Scan with OmniFit</Text>
               )}
             </TouchableOpacity>
 

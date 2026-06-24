@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "gym-ai-mobile",
-    "slug": "gym-ai-mobile",
+    "name": "OmniFit",
+    "slug": "omnifit",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

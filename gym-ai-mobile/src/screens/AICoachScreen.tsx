@@ -24,7 +24,7 @@ export default function AICoachScreen() {
     {
       id: 'welcome',
       role: 'assistant',
-      content: "Hello! I am your GymAI Coach. 🧠 I analyze what you lift, what you eat, and how your body weight changes to give you elite-level advice. Ask me anything, or tap one of the quick questions below to get started!"
+      content: "Hello! I am your OmniFit Coach. 🧠 I analyze what you lift, what you eat, and how your body weight changes to give you elite-level advice. Ask me anything, or tap one of the quick questions below to get started!"
     }
   ]);
   const [input, setInput] = useState('');
@@ -77,7 +77,7 @@ export default function AICoachScreen() {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: "I'm having trouble connecting to my database right now. Please make sure the GymAI backend server is running locally and try again!"
+        content: "I'm having trouble connecting to my database right now. Please make sure the OmniFit backend server is running locally and try again!"
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -98,7 +98,7 @@ export default function AICoachScreen() {
             <Ionicons name="sparkles" size={16} color="#000" />
           </View>
           <View>
-            <Text style={styles.headerTitle}>GymAI Coach</Text>
+            <Text style={styles.headerTitle}>OmniFit Coach</Text>
             <Text style={styles.headerStatus}>Online & Analyzing</Text>
           </View>
         </View>

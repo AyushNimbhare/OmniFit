@@ -17,8 +17,8 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(
-    title="GymAI API",
-    description="Backend API for the GymAI AI-powered fitness tracking platform.",
+    title="OmniFit API",
+    description="Backend API for the OmniFit AI-powered fitness tracking platform.",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -41,7 +41,7 @@ def read_root():
         return FileResponse(index_path)
     return {
         "status": "online",
-        "message": "GymAI API is online. Frontend client not built.",
+        "message": "OmniFit API is online. Frontend client not built.",
         "version": "1.0.0"
     }
 
