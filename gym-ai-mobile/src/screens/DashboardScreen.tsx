@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../services/AuthContext';
 import { nutritionService, workoutService, metricService, coachService } from '../services/api';
+import { Workout } from '../types';
 
 const { width } = Dimensions.get('window');
 
@@ -41,6 +42,11 @@ export default function DashboardScreen({ navigation }: any) {
     retry: false, // Don't block dashboard if no insights exist yet
   });
 
+  const { data: workouts = [], isLoading: loadingWorkouts } = useQuery({
+    queryKey: ['workouts'],
+    queryFn: workoutService.getWorkouts,
+  });
+
   // Mutation to request new coach advice
   const coachMutation = useMutation({
     mutationFn: coachService.getInsights,
@@ -67,6 +73,7 @@ export default function DashboardScreen({ navigation }: any) {
       queryClient.invalidateQueries({ queryKey: ['metrics'] }),
       queryClient.invalidateQueries({ queryKey: ['prs'] }),
       queryClient.invalidateQueries({ queryKey: ['latestInsight'] }),
+      queryClient.invalidateQueries({ queryKey: ['workouts'] }),
     ]);
     setRefreshing(false);
   };
@@ -84,6 +91,56 @@ export default function DashboardScreen({ navigation }: any) {
   const targetFat = 80;
 
   const latestWeight = metrics.length > 0 ? metrics[metrics.length - 1].weight : null;
+
+  // Streak Calculation
+  const calculateStreak = (workoutsList: Workout[]) => {
+    if (!workoutsList || workoutsList.length === 0) return 0;
+
+    // Extract unique UTC dates (YYYY-MM-DD) of workouts
+    const workoutDates = new Set<string>();
+    workoutsList.forEach(w => {
+      if (w.date) {
+        const dateStr = w.date.split('T')[0];
+        workoutDates.add(dateStr);
+      }
+    });
+
+    // Today in UTC
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    // Yesterday in UTC
+    const yesterday = new Date();
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    // If the user did not workout today or yesterday, streak is 0
+    if (!workoutDates.has(todayStr) && !workoutDates.has(yesterdayStr)) {
+      return 0;
+    }
+
+    let currentStreak = 0;
+    // Start from whichever day (today or yesterday) has a workout logged
+    let currentDate = workoutDates.has(todayStr) 
+      ? new Date(today.getTime()) 
+      : new Date(yesterday.getTime());
+
+    // Count backwards day-by-day in UTC
+    while (true) {
+      const checkStr = currentDate.toISOString().split('T')[0];
+      if (workoutDates.has(checkStr)) {
+        currentStreak++;
+        // Subtract 1 day in UTC
+        currentDate.setUTCDate(currentDate.getUTCDate() - 1);
+      } else {
+        break;
+      }
+    }
+
+    return currentStreak;
+  };
+
+  const streak = calculateStreak(workouts);
 
   return (
     <View style={styles.container}>
@@ -176,8 +233,12 @@ export default function DashboardScreen({ navigation }: any) {
               <Ionicons name="flame" size={24} color="#FF9900" />
               <Text style={styles.halfCardTitle}>Streak</Text>
             </View>
-            <Text style={styles.halfCardVal}>4 Days</Text>
-            <Text style={styles.halfCardSub}>Keep it up!</Text>
+            <Text style={styles.halfCardVal}>
+              {loadingWorkouts ? '...' : (streak === 1 ? '1 Day' : `${streak} Days`)}
+            </Text>
+            <Text style={styles.halfCardSub}>
+              {streak > 0 ? 'Keep it up!' : 'Start a streak today!'}
+            </Text>
           </View>
 
           <View style={[styles.card, styles.halfCard]}>
