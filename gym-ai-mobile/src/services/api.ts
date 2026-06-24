@@ -4,7 +4,7 @@ import {
 } from '../types';
 
 // Dynamically resolve the backend URL depending on the browser environment
-let API_BASE_URL = 'http://192.168.1.34:8000';
+let API_BASE_URL = 'http://192.168.0.102:8000';
 
 if (typeof window !== 'undefined') {
   const { hostname, port, origin } = window.location;
