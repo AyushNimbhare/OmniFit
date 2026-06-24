@@ -6,7 +6,9 @@ import {
   createUserWithEmailAndPassword, 
   signOut, 
   updateProfile,
-  onAuthStateChanged 
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup
 } from 'firebase/auth';
 import { auth, isFirebaseEnabled } from './firebase';
 
@@ -16,6 +18,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password?: string, name?: string) => Promise<void>;
   register: (name: string, email: string, password?: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => void;
 }
 
@@ -167,6 +170,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithGoogle = async () => {
+    setIsLoading(true);
+    try {
+      if (isFirebaseEnabled && auth) {
+        const provider = new GoogleAuthProvider();
+        const result = await signInWithPopup(auth, provider);
+        const firebaseUser = result.user;
+        const syncedUser = await authService.syncUser(
+          firebaseUser.email || '', 
+          firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Google User', 
+          firebaseUser.uid
+        );
+        
+        setToken(firebaseUser.uid);
+        setAuthToken(firebaseUser.uid);
+        setUser(syncedUser);
+        
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('gym_ai_token', firebaseUser.uid);
+          localStorage.setItem('gym_ai_user', JSON.stringify(syncedUser));
+        }
+      } else {
+        // Local Bypass Google Login
+        const bypassToken = `bypass-Google_User-google_at_example_dot_com`;
+        const syncedUser = await authService.syncUser('google@example.com', 'Google User', bypassToken);
+        
+        setToken(bypassToken);
+        setAuthToken(bypassToken);
+        setUser(syncedUser);
+
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('gym_ai_token', bypassToken);
+          localStorage.setItem('gym_ai_user', JSON.stringify(syncedUser));
+        }
+      }
+    } catch (error: any) {
+      console.error('Google Login error:', error);
+      throw new Error(error.message || 'Google Sign-In failed.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async () => {
     try {
       if (isFirebaseEnabled && auth) {
@@ -186,7 +232,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, register, loginWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );

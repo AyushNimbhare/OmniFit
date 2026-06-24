@@ -3,6 +3,7 @@ import {
   StyleSheet, Text, View, TextInput, TouchableOpacity, 
   ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView 
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../services/AuthContext';
 import { isFirebaseEnabled } from '../services/firebase';
 
@@ -13,7 +14,7 @@ export default function LoginScreen({ navigation }: any) {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, register } = useAuth();
+  const { login, register, loginWithGoogle } = useAuth();
 
   const handleAuthAction = async () => {
     if (!email) {
@@ -60,6 +61,18 @@ export default function LoginScreen({ navigation }: any) {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      await loginWithGoogle();
+    } catch (err: any) {
+      setError(err.message || 'Google Sign-In failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -67,7 +80,7 @@ export default function LoginScreen({ navigation }: any) {
     >
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
         <View style={styles.headerContainer}>
-          <Text style={styles.logoText}>Gym<Text style={styles.logoAccent}>AI</Text></Text>
+          <Text style={styles.logoText}>Omni<Text style={styles.logoAccent}>Fit</Text></Text>
           <Text style={styles.subtitle}>AI-Powered Strength & Nutrition</Text>
         </View>
 
@@ -153,6 +166,27 @@ export default function LoginScreen({ navigation }: any) {
               </Text>
             )}
           </TouchableOpacity>
+
+          {/* Google Sign In Option */}
+          {isFirebaseEnabled && (
+            <>
+              <View style={styles.dividerContainer}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>OR</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              <TouchableOpacity 
+                style={styles.googleButton}
+                onPress={handleGoogleLogin}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="logo-google" size={18} color="#FFFFFF" style={{ marginRight: 10 }} />
+                <Text style={styles.googleButtonText}>Continue with Google</Text>
+              </TouchableOpacity>
+            </>
+          )}
 
           {/* Real Firebase Mode toggle link */}
           {isFirebaseEnabled && (
@@ -280,6 +314,37 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#000000',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 16,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#2C2C2C',
+  },
+  dividerText: {
+    color: '#666',
+    fontSize: 12,
+    fontWeight: '600',
+    marginHorizontal: 12,
+  },
+  googleButton: {
+    backgroundColor: '#1E1E1E',
+    borderWidth: 1,
+    borderColor: '#2C2C2C',
+    borderRadius: 10,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  googleButtonText: {
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
   },
