@@ -14,25 +14,14 @@ Welcome! This is the centralized hub for the **OmniFit Git Engineer**. This docu
 
 *   **Current Branch:** `main`
 *   **Remote Origin:** `https://github.com/AyushNimbhare/OmniFit.git`
-*   **Last Committed Hash:** `f59143a` (*Initial commit: GymAI unified FastAPI backend and Expo React Native frontend*)
+*   **Last Committed Hash:** `a849c0f` (*docs: add Git Engineer log, Social Media Hub, and update local server base IP*)
 
 ### 📁 Workspace Modifications (Uncommitted Changes)
 The following files are modified or untracked in the local working directory as of **June 24, 2026**:
 
 | Status | File Path | Description of Changes |
 | :--- | :--- | :--- |
-| **Modified** | [gym-ai-api/.env.example](file:///Users/ayushnimbhare/Files/Projects/fitnessTracker/gym-ai-api/.env.example) | Added configurations / references |
-| **Modified** | [gym-ai-api/app/main.py](file:///Users/ayushnimbhare/Files/Projects/fitnessTracker/gym-ai-api/app/main.py) | Updates to API routing/serving |
-| **Modified** | [gym-ai-api/app/services/ai_service.py](file:///Users/ayushnimbhare/Files/Projects/fitnessTracker/gym-ai-api/app/services/ai_service.py) | Extended Gemini integration and prompt logic |
-| **Modified** | [gym-ai-mobile/app.json](file:///Users/ayushnimbhare/Files/Projects/fitnessTracker/gym-ai-mobile/app.json) | Expo configurations updated |
-| **Modified** | [gym-ai-mobile/src/screens/AICoachScreen.tsx](file:///Users/ayushnimbhare/Files/Projects/fitnessTracker/gym-ai-mobile/src/screens/AICoachScreen.tsx) | UX/chat screen updates |
-| **Modified** | [gym-ai-mobile/src/screens/DashboardScreen.tsx](file:///Users/ayushnimbhare/Files/Projects/fitnessTracker/gym-ai-mobile/src/screens/DashboardScreen.tsx) | UI updates to dashboard macro rings |
-| **Modified** | [gym-ai-mobile/src/screens/LoginScreen.tsx](file:///Users/ayushnimbhare/Files/Projects/fitnessTracker/gym-ai-mobile/src/screens/LoginScreen.tsx) | Firebase auth & bypass logic changes |
-| **Modified** | [gym-ai-mobile/src/screens/NutritionScreen.tsx](file:///Users/ayushnimbhare/Files/Projects/fitnessTracker/gym-ai-mobile/src/screens/NutritionScreen.tsx) | Food scanner interface improvements |
-| **Modified** | [gym-ai-mobile/src/services/AuthContext.tsx](file:///Users/ayushnimbhare/Files/Projects/fitnessTracker/gym-ai-mobile/src/services/AuthContext.tsx) | Context updates for session state |
-| **Modified** | [gym-ai-mobile/src/services/api.ts](file:///Users/ayushnimbhare/Files/Projects/fitnessTracker/gym-ai-mobile/src/services/api.ts) | Network handler endpoint bindings |
 | **Untracked** | `gym-ai-mobile/.env` | Local environment configurations (ignored by root gitignore) |
-| **Untracked** | [social_media_manager.md](file:///Users/ayushnimbhare/Files/Projects/fitnessTracker/social_media_manager.md) | Social Media Manager's strategy document |
 
 ---
 
@@ -48,10 +37,10 @@ We enforce a strict security policy to prevent sensitive information leaks:
 
 ## 📋 Git Engineering Tasks & Work in Progress
 
-- [ ] **Track and Commit Current Workspace Changes**
-  - [ ] Audit recent changes in the 10 modified files for any credentials.
-  - [ ] Group changes into cohesive commits (e.g., frontend UX updates vs. backend Gemini enhancements).
-  - [ ] Stage and commit the files.
+- [x] **Track and Commit Current Workspace Changes**
+  - [x] Audit recent changes in the 10 modified files for any credentials.
+  - [x] Group changes into cohesive commits (e.g., frontend UX updates vs. backend Gemini enhancements).
+  - [x] Stage and commit the files.
 - [ ] **Branch Management**
   - [ ] Establish branch protection guidelines if collaborating.
   - [ ] Create a `dev` branch or specific feature branches for upcoming tasks.
@@ -61,4 +50,5 @@ We enforce a strict security policy to prevent sensitive information leaks:
 ---
 
 ## 🔄 Sync Log
-*   **2026-06-24:** Initial creation of the Git Engineer Hub. Established git profile, current repository status, security checklist, and active task tracker.
+*   **2026-06-24:** Initial creation of the Git Engineer Hub.
+*   **2026-06-24:** Completed professional staging and auditing of the 10 modified files. Separated the changes into 5 logical commits (Rebranding, OpenRouter API, Streak Calculation, Google Login, and documentation/configs) and successfully pushed to remote `main`.
