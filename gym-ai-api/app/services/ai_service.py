@@ -4,6 +4,7 @@ import logging
 from typing import Optional, Dict, Any
 from dotenv import load_dotenv
 import google.generativeai as genai
+import requests
 
 load_dotenv()
 
@@ -15,7 +16,15 @@ if api_key:
     genai.configure(api_key=api_key)
     logger.info("Gemini API configured successfully.")
 else:
-    logger.warning("GEMINI_API_KEY not found in environment. AI features will run in simulated mode.")
+    logger.warning("GEMINI_API_KEY not found in environment. Food analyzer will run in simulated mode.")
+
+# Configure OpenRouter
+openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
+openrouter_model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3-8b-instruct:free")
+if openrouter_api_key:
+    logger.info(f"OpenRouter configured successfully with model: {openrouter_model}")
+else:
+    logger.warning("OPENROUTER_API_KEY not found in environment. Chatbot will run in simulated mode.")
 
 def analyze_food(
     image_bytes: Optional[bytes] = None,
@@ -80,27 +89,60 @@ def generate_coaching_advice(summary: str) -> str:
     """
     Generates tailored coaching recommendations based on training logs, nutrition, and weight trends.
     """
-    if not api_key:
-        return get_simulated_coaching_advice(summary)
-        
-    try:
-        model = genai.GenerativeModel("gemini-2.5-flash")
-        
-        prompt = f"""
-        You are GymAI Coach, an elite personal trainer, sports nutritionist, and strength coach.
-        Analyze the following user progress summary and provide clear, professional, actionable recommendations.
-        Format your response using Markdown. Keep it structured, positive, and concise (under 200 words).
-        
-        User Data Summary:
-        {summary}
-        """
-        
-        response = model.generate_content(prompt)
-        return response.text.strip()
-        
-    except Exception as e:
-        logger.error(f"Error calling Gemini for coaching: {e}")
-        return get_simulated_coaching_advice(summary)
+    prompt = f"""
+    You are OmniFit Coach, an elite personal trainer, sports nutritionist, and strength coach.
+    Analyze the following user progress summary and provide clear, professional, actionable recommendations.
+    Format your response using Markdown. Keep it structured, positive, and concise (under 200 words).
+    
+    User Data Summary:
+    {summary}
+    """
+
+    if openrouter_api_key:
+        try:
+            headers = {
+                "Authorization": f"Bearer {openrouter_api_key}",
+                "HTTP-Referer": "https://github.com/google-gemini/antigravity",
+                "Content-Type": "application/json"
+            }
+            
+            payload = {
+                "model": openrouter_model,
+                "messages": [
+                    {"role": "user", "content": prompt}
+                ]
+            }
+            
+            response = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=15
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data["choices"][0]["message"]["content"].strip()
+        except Exception as e:
+            logger.error(f"Error calling OpenRouter for coaching advice: {e}")
+            if api_key:
+                try:
+                    model = genai.GenerativeModel("gemini-2.5-flash")
+                    resp = model.generate_content(prompt)
+                    return resp.text.strip()
+                except Exception as ge:
+                    logger.error(f"Gemini fallback also failed: {ge}")
+            return get_simulated_coaching_advice(summary)
+
+    if api_key:
+        try:
+            model = genai.GenerativeModel("gemini-2.5-flash")
+            response = model.generate_content(prompt)
+            return response.text.strip()
+        except Exception as e:
+            logger.error(f"Error calling Gemini for coaching: {e}")
+            return get_simulated_coaching_advice(summary)
+            
+    return get_simulated_coaching_advice(summary)
 
 def get_simulated_food_analysis(description: Optional[str] = None) -> Dict[str, Any]:
     """
@@ -179,7 +221,7 @@ def get_simulated_coaching_advice(summary: str) -> str:
     """
     summary_lower = summary.lower()
     
-    advice = "### 🧠 GymAI Coach Recommendations (Simulated)\n\n"
+    advice = "### 🧠 OmniFit Coach Recommendations (Simulated)\n\n"
     
     # Analyze protein
     if "protein" in summary_lower and ("low" in summary_lower or "under" in summary_lower or "below" in summary_lower or "g/day" in summary_lower):
@@ -209,33 +251,95 @@ def chat_with_coach(message: str, history: list, context: str) -> str:
     """
     Sends a message to the AI coach, along with conversation history and user statistics context.
     """
-    if not api_key:
-        return get_simulated_chat_response(message, context)
-        
-    try:
-        model = genai.GenerativeModel("gemini-2.5-flash")
-        
-        prompt_parts = [
-            "You are GymAI Coach, an elite personal trainer and sports nutritionist.",
-            "Here is the user's progress context:",
-            context,
-            "\nConversation history:"
-        ]
-        
-        for msg in history:
-            role_name = "User" if msg["role"] == "user" else "Coach"
-            prompt_parts.append(f"{role_name}: {msg['content']}")
+    if openrouter_api_key:
+        try:
+            headers = {
+                "Authorization": f"Bearer {openrouter_api_key}",
+                "HTTP-Referer": "https://github.com/google-gemini/antigravity",
+                "Content-Type": "application/json"
+            }
             
-        prompt_parts.append(f"User: {message}")
-        prompt_parts.append("Coach:")
-        
-        prompt = "\n".join(prompt_parts)
-        response = model.generate_content(prompt)
-        return response.text.strip()
-        
-    except Exception as e:
-        logger.error(f"Error in chat_with_coach: {e}")
-        return get_simulated_chat_response(message, context)
+            system_prompt = (
+                "You are OmniFit Coach, an elite personal trainer and sports nutritionist. "
+                "Provide professional, supportive, and scientifically sound advice.\n"
+                f"Here is the user's progress context (workouts, nutrition, metrics):\n{context}"
+            )
+            
+            messages = [
+                {"role": "system", "content": system_prompt}
+            ]
+            
+            for msg in history:
+                role = "user" if msg["role"] == "user" else "assistant"
+                messages.append({"role": role, "content": msg["content"]})
+                
+            messages.append({"role": "user", "content": message})
+            
+            payload = {
+                "model": openrouter_model,
+                "messages": messages
+            }
+            
+            response = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=20
+            )
+            response.raise_for_status()
+            data = response.json()
+            return data["choices"][0]["message"]["content"].strip()
+            
+        except Exception as e:
+            logger.error(f"Error in chat_with_coach (OpenRouter): {e}")
+            if api_key:
+                try:
+                    model = genai.GenerativeModel("gemini-2.5-flash")
+                    prompt_parts = [
+                        "You are OmniFit Coach, an elite personal trainer and sports nutritionist.",
+                        "Here is the user's progress context:",
+                        context,
+                        "\nConversation history:"
+                    ]
+                    for msg in history:
+                        role_name = "User" if msg["role"] == "user" else "Coach"
+                        prompt_parts.append(f"{role_name}: {msg['content']}")
+                    prompt_parts.append(f"User: {message}")
+                    prompt_parts.append("Coach:")
+                    prompt = "\n".join(prompt_parts)
+                    resp = model.generate_content(prompt)
+                    return resp.text.strip()
+                except Exception as ge:
+                    logger.error(f"Gemini fallback chat also failed: {ge}")
+            return get_simulated_chat_response(message, context)
+
+    if api_key:
+        try:
+            model = genai.GenerativeModel("gemini-2.5-flash")
+            
+            prompt_parts = [
+                "You are OmniFit Coach, an elite personal trainer and sports nutritionist.",
+                "Here is the user's progress context:",
+                context,
+                "\nConversation history:"
+            ]
+            
+            for msg in history:
+                role_name = "User" if msg["role"] == "user" else "Coach"
+                prompt_parts.append(f"{role_name}: {msg['content']}")
+                
+            prompt_parts.append(f"User: {message}")
+            prompt_parts.append("Coach:")
+            
+            prompt = "\n".join(prompt_parts)
+            response = model.generate_content(prompt)
+            return response.text.strip()
+            
+        except Exception as e:
+            logger.error(f"Error in chat_with_coach: {e}")
+            return get_simulated_chat_response(message, context)
+            
+    return get_simulated_chat_response(message, context)
 
 def get_simulated_chat_response(message: str, context: str) -> str:
     """
