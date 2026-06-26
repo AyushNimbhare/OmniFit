@@ -172,5 +172,13 @@ export const coachService = {
     });
     return res.data.response;
   },
+  getMemory: async (): Promise<any> => {
+    const res = await api.get('/api/coach/memory');
+    return res.data;
+  },
+  updateMemory: async (content: string): Promise<any> => {
+    const res = await api.put('/api/coach/memory', { content });
+    return res.data;
+  },
 };
 
