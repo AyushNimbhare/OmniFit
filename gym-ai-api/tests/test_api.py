@@ -184,3 +184,40 @@ def test_coach_insights(client):
     assert res_coach.status_code == 200
     assert res_coach.json()["type"] == "coach"
     assert len(res_coach.json()["content"]) > 0
+
+def test_coach_memory(client):
+    uid = "bypass-Test_User-tester_at_example_dot_com"
+    client.post("/api/auth/sync", json={
+        "email": "tester@example.com",
+        "name": "Test User",
+        "firebase_uid": uid
+    })
+    headers = {"Authorization": f"Bearer {uid}"}
+    
+    # 1. Get memory (initial, default)
+    res_mem = client.get("/api/coach/memory", headers=headers)
+    assert res_mem.status_code == 200
+    assert "No facts recorded yet" in res_mem.json()["content"]
+    
+    # 2. Update memory manually
+    update_payload = {"content": "- Goal: Increase Bench Press\n- Injury: Elbow pain"}
+    res_put = client.put("/api/coach/memory", headers=headers, json=update_payload)
+    assert res_put.status_code == 200
+    assert "Bench Press" in res_put.json()["content"]
+    
+    # 3. Retrieve and confirm manual update
+    res_mem2 = client.get("/api/coach/memory", headers=headers)
+    assert res_mem2.status_code == 200
+    assert "Elbow pain" in res_mem2.json()["content"]
+    
+    # 4. Chat with coach to trigger keyword learning (e.g., "vegan")
+    chat_payload = {
+        "message": "I want to eat more protein but I am a vegan",
+        "history": []
+    }
+    res_chat = client.post("/api/coach/chat", headers=headers, json=chat_payload)
+    assert res_chat.status_code == 200
+    chat_data = res_chat.json()
+    assert "response" in chat_data
+    assert "updated_memory" in chat_data
+    assert "plant-based diet" in chat_data["updated_memory"]
