@@ -116,3 +116,13 @@ class ExercisePRResponse(BaseModel):
     max_weight: float
     max_reps: int
     max_volume: float
+
+class UserMemoryResponse(BaseModel):
+    user_id: int
+    content: str
+    updated_at: datetime
+    class Config:
+        from_attributes = True
+
+class UserMemoryUpdate(BaseModel):
+    content: str
