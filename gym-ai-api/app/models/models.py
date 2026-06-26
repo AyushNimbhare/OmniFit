@@ -80,3 +80,9 @@ class AIInsight(SQLModel, table=True):
 
     # Relationships
     user: User = Relationship(back_populates="ai_insights")
+
+class UserMemory(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True, unique=True)
+    content: str = Field(default="")
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
