@@ -18,6 +18,6 @@ gym-ai-mobile/.expo/
 gym-ai-mobile/dist/
 gym-ai-mobile/web-build/
 gym-ai-mobile/expo-env.d.ts
-gym-ai-mobile/.env*.local
+gym-ai-mobile/.env*
 gym-ai-mobile/ios/
 gym-ai-mobile/android/
