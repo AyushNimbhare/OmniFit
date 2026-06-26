@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../services/AuthContext';
 import { nutritionService, workoutService, metricService, coachService } from '../services/api';
 import { Workout } from '../types';
+import { parseMarkdown } from '../services/markdown';
 
 const { width } = Dimensions.get('window');
 
@@ -281,7 +282,7 @@ export default function DashboardScreen({ navigation }: any) {
             <ActivityIndicator size="small" color="#00F5FF" style={{ marginVertical: 20 }} />
           ) : latestInsight ? (
             <View style={styles.insightContentContainer}>
-              <Text style={styles.insightText}>{latestInsight.content}</Text>
+              {parseMarkdown(latestInsight.content, styles.insightText, { color: '#00F5FF' })}
             </View>
           ) : (
             <View style={styles.noInsightContainer}>

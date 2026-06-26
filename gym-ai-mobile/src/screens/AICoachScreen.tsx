@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { coachService } from '../services/api';
+import { parseMarkdown } from '../services/markdown';
 
 interface Message {
   id: string;
@@ -129,12 +130,20 @@ export default function AICoachScreen() {
                 msg.role === 'user' ? styles.userBubble : styles.assistantBubble
               ]}
             >
-              <Text style={[
-                styles.messageText, 
-                msg.role === 'user' ? styles.userMessageText : styles.assistantMessageText
-              ]}>
-                {msg.content}
-              </Text>
+              {msg.role === 'user' ? (
+                <Text style={[
+                  styles.messageText, 
+                  msg.role === 'user' ? styles.userMessageText : styles.assistantMessageText
+                ]}>
+                  {msg.content}
+                </Text>
+              ) : (
+                parseMarkdown(
+                  msg.content, 
+                  [styles.messageText, styles.assistantMessageText],
+                  { color: '#00F5FF' }
+                )
+              )}
             </View>
           </View>
         ))}
