@@ -2,8 +2,8 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
 from app.db.database import get_session
-from app.models.models import User, Workout, WorkoutLog, NutritionLog, BodyMetric, AIInsight
-from app.schemas.schemas import AIInsightResponse
+from app.models.models import User, Workout, WorkoutLog, NutritionLog, BodyMetric, AIInsight, UserMemory
+from app.schemas.schemas import AIInsightResponse, UserMemoryResponse, UserMemoryUpdate
 from app.api.auth import get_current_user
 from app.services import ai_service
 
@@ -147,6 +147,54 @@ class ChatRequest(BaseModel):
     message: str
     history: List[ChatMessage] = []
 
+@router.get("/memory", response_model=UserMemoryResponse)
+def get_memory(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Retrieve the current coach memory for the user.
+    """
+    memory = session.exec(
+        select(UserMemory).where(UserMemory.user_id == current_user.id)
+    ).first()
+    
+    if not memory:
+        memory = UserMemory(
+            user_id=current_user.id,
+            content="- No facts recorded yet. Tell the coach about your training goal or injuries!"
+        )
+        session.add(memory)
+        session.commit()
+        session.refresh(memory)
+        
+    return memory
+
+@router.put("/memory", response_model=UserMemoryResponse)
+def update_memory(
+    payload: UserMemoryUpdate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Manually update the coach memory for the user.
+    """
+    memory = session.exec(
+        select(UserMemory).where(UserMemory.user_id == current_user.id)
+    ).first()
+    
+    if not memory:
+        memory = UserMemory(user_id=current_user.id)
+        session.add(memory)
+        
+    memory.content = payload.content
+    memory.updated_at = datetime.utcnow()
+    
+    session.add(memory)
+    session.commit()
+    session.refresh(memory)
+    return memory
+
 @router.post("/chat")
 def chat_with_coach(
     request: ChatRequest,
@@ -156,6 +204,7 @@ def chat_with_coach(
     """
     Interactive chat with GymAI Coach.
     Uses the user's logged activity as background context for the AI advisor.
+    Also incorporates persistent memory.
     """
     now = datetime.utcnow()
     last_30_days = now - timedelta(days=30)
@@ -177,9 +226,35 @@ def chat_with_coach(
         avg_prot = sum(n.protein for n in nutrition) / logging_days
         context += f"Avg Calories (last 7d): {avg_cal:.1f} kcal, Avg Protein: {avg_prot:.1f}g\n"
         
+    # Get user memory
+    memory = session.exec(
+        select(UserMemory).where(UserMemory.user_id == current_user.id)
+    ).first()
+    if not memory:
+        memory = UserMemory(
+            user_id=current_user.id,
+            content="- No facts recorded yet. Tell the coach about your training goal or injuries!"
+        )
+        session.add(memory)
+        session.commit()
+        session.refresh(memory)
+        
     # Format history for the AI service
     hist_dicts = [{"role": msg.role, "content": msg.content} for msg in request.history]
     
-    response_text = ai_service.chat_with_coach(request.message, hist_dicts, context)
-    return {"response": response_text}
+    ai_result = ai_service.chat_with_coach(request.message, hist_dicts, context, memory.content)
+    
+    # Save the updated memory if it was returned
+    updated_memory = ai_result.get("updated_memory", memory.content)
+    if updated_memory != memory.content:
+        memory.content = updated_memory
+        memory.updated_at = datetime.utcnow()
+        session.add(memory)
+        session.commit()
+        session.refresh(memory)
+        
+    return {
+        "response": ai_result.get("response", ""),
+        "updated_memory": memory.content
+    }
 
