@@ -20,7 +20,7 @@ else:
 
 # Configure OpenRouter
 openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
-openrouter_model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3-8b-instruct:free")
+openrouter_model = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.3-70b-instruct:free")
 if openrouter_api_key:
     logger.info(f"OpenRouter configured successfully with model: {openrouter_model}")
 else:
