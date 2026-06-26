@@ -247,9 +247,10 @@ def get_simulated_coaching_advice(summary: str) -> str:
     advice += "* **Recovery Tip:** Keep sleep consistency high. 7-8 hours of sleep per night is when the real muscle growth and nervous system recovery happens!"
     return advice
 
-def chat_with_coach(message: str, history: list, context: str) -> str:
+def chat_with_coach(message: str, history: list, context: str, current_memory: str) -> dict:
     """
-    Sends a message to the AI coach, along with conversation history and user statistics context.
+    Sends a message to the AI coach, along with conversation history, user statistics context, and current memory.
+    Returns a dictionary: {"response": str, "updated_memory": str}
     """
     if openrouter_api_key:
         try:
@@ -262,7 +263,17 @@ def chat_with_coach(message: str, history: list, context: str) -> str:
             system_prompt = (
                 "You are OmniFit Coach, an elite personal trainer and sports nutritionist. "
                 "Provide professional, supportive, and scientifically sound advice.\n"
-                f"Here is the user's progress context (workouts, nutrition, metrics):\n{context}"
+                f"Here is the user's progress context (workouts, nutrition, metrics):\n{context}\n\n"
+                f"Here is what you currently remember about the user:\n{current_memory}\n\n"
+                "INSTRUCTIONS:\n"
+                "1. Respond to the user's latest message.\n"
+                "2. Update the facts you remember about the user based on their latest message (e.g. new goals, injuries, dietary preferences, schedule, gym access). "
+                "Keep the list concise, structured as bullet points, and correct any outdated facts.\n"
+                "3. You MUST respond with a JSON object in this format:\n"
+                "{\n"
+                "  \"response\": \"Your reply to the user (in markdown format, keep it friendly and under 150 words)\",\n"
+                "  \"updated_memory\": \"The complete, updated list of facts you remember about the user (bullet-pointed).\"\n"
+                "}"
             )
             
             messages = [
@@ -277,7 +288,8 @@ def chat_with_coach(message: str, history: list, context: str) -> str:
             
             payload = {
                 "model": openrouter_model,
-                "messages": messages
+                "messages": messages,
+                "response_format": {"type": "json_object"}
             }
             
             response = requests.post(
@@ -288,73 +300,143 @@ def chat_with_coach(message: str, history: list, context: str) -> str:
             )
             response.raise_for_status()
             data = response.json()
-            return data["choices"][0]["message"]["content"].strip()
+            raw_content = data["choices"][0]["message"]["content"].strip()
+            
+            try:
+                res_data = json.loads(raw_content)
+                if "response" in res_data and "updated_memory" in res_data:
+                    return res_data
+                return {"response": raw_content, "updated_memory": current_memory}
+            except Exception as pe:
+                logger.error(f"JSON parsing of OpenRouter response failed: {pe}")
+                return {"response": raw_content, "updated_memory": current_memory}
             
         except Exception as e:
             logger.error(f"Error in chat_with_coach (OpenRouter): {e}")
             if api_key:
                 try:
                     model = genai.GenerativeModel("gemini-2.5-flash")
-                    prompt_parts = [
-                        "You are OmniFit Coach, an elite personal trainer and sports nutritionist.",
-                        "Here is the user's progress context:",
-                        context,
-                        "\nConversation history:"
-                    ]
-                    for msg in history:
-                        role_name = "User" if msg["role"] == "user" else "Coach"
-                        prompt_parts.append(f"{role_name}: {msg['content']}")
-                    prompt_parts.append(f"User: {message}")
-                    prompt_parts.append("Coach:")
-                    prompt = "\n".join(prompt_parts)
-                    resp = model.generate_content(prompt)
-                    return resp.text.strip()
+                    prompt = f"""
+                    You are OmniFit Coach, an elite personal trainer and sports nutritionist.
+                    Provide professional, supportive, and scientifically sound advice.
+                    
+                    User progress context:
+                    {context}
+                    
+                    Here is what you currently remember about the user:
+                    {current_memory}
+                    
+                    User's latest message: {message}
+                    
+                    Respond ONLY with a JSON object in this format:
+                    {{
+                      "response": "Your reply to the user (friendly, markdown, under 150 words)",
+                      "updated_memory": "The complete, updated list of facts you remember about the user (bullet points)."
+                    }}
+                    """
+                    resp = model.generate_content(
+                        prompt,
+                        generation_config={"response_mime_type": "application/json"}
+                    )
+                    raw_content = resp.text.strip()
+                    try:
+                        res_data = json.loads(raw_content)
+                        if "response" in res_data and "updated_memory" in res_data:
+                            return res_data
+                        return {"response": raw_content, "updated_memory": current_memory}
+                    except Exception as pe:
+                        logger.error(f"Gemini fallback chat parse failed: {pe}")
+                        return {"response": raw_content, "updated_memory": current_memory}
                 except Exception as ge:
                     logger.error(f"Gemini fallback chat also failed: {ge}")
-            return get_simulated_chat_response(message, context)
+            return get_simulated_chat_response(message, context, current_memory)
 
     if api_key:
         try:
             model = genai.GenerativeModel("gemini-2.5-flash")
+            prompt = f"""
+            You are OmniFit Coach, an elite personal trainer and sports nutritionist.
+            Provide professional, supportive, and scientifically sound advice.
             
-            prompt_parts = [
-                "You are OmniFit Coach, an elite personal trainer and sports nutritionist.",
-                "Here is the user's progress context:",
-                context,
-                "\nConversation history:"
-            ]
+            User progress context:
+            {context}
             
-            for msg in history:
-                role_name = "User" if msg["role"] == "user" else "Coach"
-                prompt_parts.append(f"{role_name}: {msg['content']}")
-                
-            prompt_parts.append(f"User: {message}")
-            prompt_parts.append("Coach:")
+            Here is what you currently remember about the user:
+            {current_memory}
             
-            prompt = "\n".join(prompt_parts)
-            response = model.generate_content(prompt)
-            return response.text.strip()
+            User's latest message: {message}
+            
+            Respond ONLY with a JSON object in this format:
+            {{
+              "response": "Your reply to the user (friendly, markdown, under 150 words)",
+              "updated_memory": "The complete, updated list of facts you remember about the user (bullet points)."
+            }}
+            """
+            resp = model.generate_content(
+                prompt,
+                generation_config={"response_mime_type": "application/json"}
+            )
+            raw_content = resp.text.strip()
+            try:
+                res_data = json.loads(raw_content)
+                if "response" in res_data and "updated_memory" in res_data:
+                    return res_data
+                return {"response": raw_content, "updated_memory": current_memory}
+            except Exception as pe:
+                logger.error(f"Gemini chat parse failed: {pe}")
+                return {"response": raw_content, "updated_memory": current_memory}
             
         except Exception as e:
-            logger.error(f"Error in chat_with_coach: {e}")
-            return get_simulated_chat_response(message, context)
+            logger.error(f"Error in chat_with_coach (Gemini): {e}")
+            return get_simulated_chat_response(message, context, current_memory)
             
-    return get_simulated_chat_response(message, context)
+    return get_simulated_chat_response(message, context, current_memory)
 
-def get_simulated_chat_response(message: str, context: str) -> str:
+def get_simulated_chat_response(message: str, context: str, current_memory: str) -> dict:
     """
-    Simulated responses for user queries if Gemini API is disabled.
+    Simulated responses for user queries if Gemini/OpenRouter API is disabled.
+    Automatically simulates memory extraction based on keywords.
     """
     msg = message.lower()
+    response_text = ""
+    new_memory_bullets = []
     
+    # Simple rule-based simulation of learning things
     if "protein" in msg or "eat" in msg or "diet" in msg or "nutrition" in msg or "cal" in msg:
-        return "Based on your nutrition data, I recommend aiming for 1.6g to 2.2g of protein per kg of body weight. Try dividing your protein intake into 3-4 meals containing 30-40g each to maximize muscle protein synthesis. What does your current protein intake look like today?"
-        
-    if "bench" in msg or "squat" in msg or "deadlift" in msg or "stall" in msg or "stuck" in msg or "plateau" in msg or "lift" in msg:
-        return "When compound lifts stall, it's usually due to recovery or progression structure. Try implementing a deload week where you drop the weight by 20% but keep volume high to let your nervous system recover. Or switch from 3 sets of 8 to 5 sets of 5 reps to build raw strength. Let me know which lift is giving you trouble!"
-        
-    if "weight" in msg or "fat" in msg or "cut" in msg or "bulk" in msg:
-        return "To optimize your weight, align your calorie intake with your goals. For muscle building (bulk), maintain a surplus of +250 to +500 kcal daily. For fat loss (cut), maintain a deficit of -350 to -500 kcal. Make sure your training remains heavy to retain muscle mass during a cut. What is your primary body goal right now?"
-        
-    return "Great question! Consistent tracking of your sets, reps, weight, and meals is the foundation of progress. Keep logging daily. Is there a specific exercise, diet query, or weight target you'd like us to focus on next?"
+        response_text = "Based on your nutrition data, I recommend aiming for 1.6g to 2.2g of protein per kg of body weight. Try dividing your protein intake into 3-4 meals containing 30-40g each to maximize muscle protein synthesis. What does your current protein intake look like today?"
+        if "protein" in msg:
+            new_memory_bullets.append("wants to increase protein intake")
+    elif "bench" in msg or "squat" in msg or "deadlift" in msg or "stall" in msg or "stuck" in msg or "plateau" in msg or "lift" in msg:
+        response_text = "When compound lifts stall, it's usually due to recovery or progression structure. Try implementing a deload week where you drop the weight by 20% but keep volume high to let your nervous system recover. Or switch from 3 sets of 8 to 5 sets of 5 reps to build raw strength. Let me know which lift is giving you trouble!"
+        if "bench" in msg or "squat" in msg or "deadlift" in msg:
+            new_memory_bullets.append("focusing on compound lifts progression")
+    elif "weight" in msg or "fat" in msg or "cut" in msg or "bulk" in msg:
+        response_text = "To optimize your weight, align your calorie intake with your goals. For muscle building (bulk), maintain a surplus of +250 to +500 kcal daily. For fat loss (cut), maintain a deficit of -350 to -500 kcal. Make sure your training remains heavy to retain muscle mass during a cut. What is your primary body goal right now?"
+        if "cut" in msg or "lose" in msg:
+            new_memory_bullets.append("goal: fat loss (cutting phase)")
+        elif "bulk" in msg or "gain" in msg:
+            new_memory_bullets.append("goal: muscle gain (bulking phase)")
+    else:
+        response_text = "Great question! Consistent tracking of your sets, reps, weight, and meals is the foundation of progress. Keep logging daily. Is there a specific exercise, diet query, or weight target you'd like us to focus on next?"
+
+    # Check for direct declarations
+    if "injury" in msg or "injured" in msg:
+        new_memory_bullets.append("managing an injury / training around pain")
+    if "vegan" in msg or "vegetarian" in msg:
+        new_memory_bullets.append("follows a plant-based diet")
+
+    # Update current memory string
+    memory_lines = [line.strip() for line in current_memory.split('\n') if line.strip() and line.strip() != "- No facts recorded yet. Tell the coach about your training goal or injuries!"]
+    for bullet in new_memory_bullets:
+        bullet_str = f"- {bullet}"
+        # Avoid duplicates
+        if not any(bullet.lower() in existing.lower() for existing in memory_lines):
+            memory_lines.append(bullet_str)
+            
+    updated_memory = "\n".join(memory_lines) if memory_lines else "- No facts recorded yet. Tell the coach about your training goal or injuries!"
+    
+    return {
+        "response": response_text,
+        "updated_memory": updated_memory
+    }
 
