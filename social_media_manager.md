@@ -47,7 +47,77 @@ Welcome! This is the centralized hub for the **OmniFit Social Media Manager**. T
   - [ ] Plan "How It Works" carousel for the AI Food Scanner.
   - [ ] Plan video demo for the Workout Progress Analytics.
 
+## ✍️ Copy Drafts
+
+### 1. LinkedIn Post (Founder's Story / Building in Public)
+**Target Tone:** Snappy, personal, short buildup, builder-perspective, primary USP-focused (AI Image Analysis), protein-tracking focus.
+**Visual suggestion:** A short screen recording of taking a photo of a plate of dal, roti, and paneer, and watching the app instantly parse it into calories and macros with a highlight on the protein bar.
+
+```text
+I went back to the gym a month ago.
+
+By day 4, I was ready to throw my phone through a drywall.
+
+Not because of the lifts. But because tracking home-cooked food (like dal, roti, and paneer) in database apps is an absolute nightmare. 
+
+You spend more time searching conflicting entries and manually calculating protein than actually training. 
+
+Eventually, the friction wins. You stop tracking. 
+
+I thought: what if I could log my protein and calorie intake with just a picture?
+
+So instead of quitting my fitness routine, I built **OmniFit** to do exactly that.
+
+📸 **The Core USP: Log food with a single photo**
+No database searching. Snap a photo of your plate. The Google Gemini API (gemini-2.5-flash) instantly estimates calories, macros, and most importantly, your daily protein. It takes 2 seconds.
+
+🤖 **The Second USP: An AI Coach that actually directs you**
+I integrated an AI Coach via OpenRouter. It tracks your workouts and protein, and tells you exactly what to adjust (e.g. "You've stalled on bench. Increase protein and deload next week").
+
+This is Day 4 of working on this app, and starting today, I'm documenting the entire journey here. 
+
+I just got the photo scanner working today, and keeping my protein on target already feels effortless.
+
+If you track, what is the single biggest friction point that makes you want to quit? 👇
+```
+
+### 2. Simulated Chat Transcripts (For Visuals/Promos)
+**Context:** A highly realistic, data-driven conversation between Ayush and the OmniFit Coach, illustrating the integration of both USPs (Image food scanning and personalized training advice).
+
+```text
+Ayush: "Hey Coach, my bench press has been stuck at 80kg for 3 weeks now. And I feel like my weight is dropping. What am I doing wrong?"
+
+OmniFit Coach: "Hey Ayush, I looked at your logs. Your bench press stalling and weight dropping are directly connected. 
+
+Here is what the data shows:
+1. Calorie Deficit: Your weight is down 0.6kg this week. Your average intake is 2,100 kcal, but your maintenance is around 2,400 kcal. You're in a deficit, which drains your strength.
+2. Protein Intake: You logged an average of 95g of protein daily. For your 75kg bodyweight and strength goals, we need to hit 135g-150g.
+
+What to do today:
+→ Increase calories by 300 kcal (add extra paneer or double up your dal/rice post-workout).
+→ Bench press today: Instead of trying 80kg again and failing, let's deload to 72.5kg for a clean 3x10. We need to rebuild momentum.
+
+Does that sound like a plan you can hit today?"
+```
+
 ---
 
 ## 🔄 Sync Log
 *   **2026-06-24:** Initial creation of the Social Media Manager Hub. Established brand profile, core pillars, and pre-launch task tracker.
+*   **2026-06-24:** Read PROGRESS.md, synced context on MVP features (Firebase, Gemini API, OpenRouter chat integration), active ports, and backlog. Ready to assist as Social Media Manager.
+*   **2026-06-24:** Drafted first LinkedIn post focusing on Phase 2 completion, Gemini/OpenRouter AI integration, and the tech stack. Updated social_media_manager.md.
+*   **2026-06-24:** Humanised the LinkedIn post to adopt a personal, founder-builder perspective, focusing on tracking friction. Updated social_media_manager.md.
+*   **2026-06-24:** Refined the LinkedIn post style to make it visually scannable, punchy, and engaging (broken into short lines, using clean bullet points and emojis). Updated social_media_manager.md.
+*   **2026-06-24:** Refocused the LinkedIn post on the core USPs (AI Image Food Scanning & AI Coach advice) and updated the call-to-action to a high-engagement A/B poll question. Updated social_media_manager.md.
+*   **2026-06-24:** Structured the LinkedIn post hierarchy to prioritize Image Analysis as the primary USP and the AI Coach as the secondary USP. Updated social_media_manager.md.
+*   **2026-06-24:** Rewrote the LinkedIn post from the developer's perspective, emphasizing the builder story, expanding on the AI Image Analysis USP, and prompting with a developer-centric engagement question. Updated social_media_manager.md.
+*   **2026-06-24:** Integrated the user's personal context of returning to the gym a month ago into the LinkedIn story, showcasing how the app resolved their immediate tracking friction. Updated social_media_manager.md.
+*   **2026-06-24:** Refined the buildup of the LinkedIn post to make it humorous, punchy, and highly engaging (using the "drywall-punch" hook to instantly hook readers). Updated social_media_manager.md.
+*   **2026-06-24:** Updated the LinkedIn post with Desi diet context (swapping Greek yogurt for dal, roti, and paneer database pain) and highlighted protein tracking as a key feature. Updated social_media_manager.md.
+*   **2026-06-24:** Condensed the buildup structure and tightened the focus on home-cooked food tracking and protein monitoring. Updated social_media_manager.md.
+*   **2026-06-24:** Added the transition line detailing the spark of the idea: "what if I could log my protein and calorie intake with just a picture?". Updated social_media_manager.md.
+*   **2026-06-24:** Added the journey documentation statement ("Day 30 of working on this app...") after the second USP in the LinkedIn draft. Updated social_media_manager.md.
+*   **2026-06-24:** Corrected the app timeline to Day 4 of development, and adjusted the tracking experience paragraph to reflect using the photo scanner for the last 48 hours. Updated social_media_manager.md.
+*   **2026-06-24:** Updated the photo scanner status to indicate it was just got working today, aligning with the real-time project milestone. Updated social_media_manager.md.
+*   **2026-06-24:** Integrated the actual, conversational OmniFit Coach dialogue from the UI screenshot to replace the generic example. Updated social_media_manager.md.
+*   **2026-06-24:** Restored the finalized LinkedIn caption and created a new section for simulated promotional conversation transcripts (Coach-user interaction showcasing the USPs). Updated social_media_manager.md.
