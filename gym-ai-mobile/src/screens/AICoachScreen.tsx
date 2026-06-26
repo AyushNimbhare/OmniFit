@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   StyleSheet, Text, View, ScrollView, TextInput, 
-  TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator 
+  TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator,
+  Modal
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { coachService } from '../services/api';
 import { parseMarkdown } from '../services/markdown';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface Message {
   id: string;
@@ -21,6 +23,33 @@ const QUICK_QUESTIONS = [
 ];
 
 export default function AICoachScreen() {
+  const queryClient = useQueryClient();
+  const { data: memoryData, isLoading: loadingMemory } = useQuery({
+    queryKey: ['coachMemory'],
+    queryFn: coachService.getMemory
+  });
+
+  const updateMemoryMutation = useMutation({
+    mutationFn: coachService.updateMemory,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['coachMemory'] });
+      setShowEditModal(false);
+    }
+  });
+
+  const [memoryExpanded, setMemoryExpanded] = useState(true);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editText, setEditText] = useState('');
+
+  const openEditModal = () => {
+    setEditText(memoryData?.content || '');
+    setShowEditModal(true);
+  };
+
+  const handleSaveMemory = () => {
+    updateMemoryMutation.mutate(editText);
+  };
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
@@ -73,6 +102,7 @@ export default function AICoachScreen() {
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+      queryClient.invalidateQueries({ queryKey: ['coachMemory'] });
     } catch (e) {
       console.error(e);
       const errorMessage: Message = {
@@ -111,6 +141,51 @@ export default function AICoachScreen() {
         contentContainerStyle={styles.scrollContainer}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Coach Memory Panel */}
+        <View style={styles.memoryCard}>
+          <TouchableOpacity 
+            style={styles.memoryHeader}
+            onPress={() => setMemoryExpanded(!memoryExpanded)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.memoryHeaderLeft}>
+              <Ionicons name="brain" size={18} color="#00F5FF" style={{ marginRight: 8 }} />
+              <Text style={styles.memoryTitle}>Coach Memory</Text>
+            </View>
+            <View style={styles.memoryHeaderRight}>
+              <TouchableOpacity onPress={openEditModal} style={styles.editBtn}>
+                <Ionicons name="create-outline" size={12} color="#00F5FF" />
+                <Text style={styles.editBtnText}>Edit</Text>
+              </TouchableOpacity>
+              <Ionicons 
+                name={memoryExpanded ? "chevron-up" : "chevron-down"} 
+                size={18} 
+                color="#A0A0A0" 
+                style={{ marginLeft: 10 }}
+              />
+            </View>
+          </TouchableOpacity>
+
+          {memoryExpanded && (
+            <View style={styles.memoryBody}>
+              {loadingMemory ? (
+                <ActivityIndicator size="small" color="#00F5FF" style={{ marginVertical: 10 }} />
+              ) : (
+                <View style={styles.memoryContent}>
+                  {parseMarkdown(
+                    memoryData?.content || "- No facts recorded yet. Tell the coach about your training goal or injuries!",
+                    [styles.memoryText],
+                    { color: '#00F5FF' }
+                  )}
+                </View>
+              )}
+              <Text style={styles.memoryFooter}>
+                The coach learns these facts automatically from your conversations.
+              </Text>
+            </View>
+          )}
+        </View>
+
         {messages.map((msg) => (
           <View 
             key={msg.id} 
@@ -200,6 +275,63 @@ export default function AICoachScreen() {
           <Ionicons name="send" size={18} color={input.trim() ? "#000" : "#666"} />
         </TouchableOpacity>
       </View>
+
+      {/* Edit Memory Modal */}
+      <Modal
+        visible={showEditModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowEditModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalContent}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>🧠 Edit Coach Memory</Text>
+              <TouchableOpacity onPress={() => setShowEditModal(false)}>
+                <Ionicons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={styles.modalDescription}>
+              Manually correct or add facts about your goals, injuries, dietary preferences, or schedule. Use bullet points for best results.
+            </Text>
+
+            <TextInput
+              style={styles.modalInput}
+              multiline={true}
+              numberOfLines={8}
+              value={editText}
+              onChangeText={setEditText}
+              placeholder="e.g.&#10;- Goal: Gain 5kg muscle&#10;- Injury: Right shoulder discomfort&#10;- Preference: Vegetarian diet"
+              placeholderTextColor="#666"
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={[styles.modalBtn, styles.cancelBtn]} 
+                onPress={() => setShowEditModal(false)}
+              >
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.modalBtn, styles.saveBtn]} 
+                onPress={handleSaveMemory}
+                disabled={updateMemoryMutation.isPending}
+              >
+                {updateMemoryMutation.isPending ? (
+                  <ActivityIndicator size="small" color="#000" />
+                ) : (
+                  <Text style={styles.saveBtnText}>Save Changes</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -365,5 +497,145 @@ const styles = StyleSheet.create({
   },
   disabledSendBtn: {
     backgroundColor: '#2C2C2C',
+  },
+  memoryCard: {
+    backgroundColor: '#1E1E1E',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 245, 255, 0.15)',
+    borderRadius: 16,
+    marginBottom: 20,
+    overflow: 'hidden',
+  },
+  memoryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#252525',
+  },
+  memoryHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  memoryTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  memoryHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  editBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 245, 255, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 245, 255, 0.2)',
+  },
+  editBtnText: {
+    color: '#00F5FF',
+    fontSize: 11,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  memoryBody: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderColor: '#2C2C2C',
+  },
+  memoryContent: {
+    marginBottom: 10,
+  },
+  memoryText: {
+    color: '#E0E0E0',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  memoryFooter: {
+    fontSize: 10,
+    color: '#666',
+    fontStyle: 'italic',
+    marginTop: 6,
+    borderTopWidth: 1,
+    borderColor: '#2C2C2C',
+    paddingTop: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#1E1E1E',
+    borderWidth: 1,
+    borderColor: '#2C2C2C',
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 500,
+    padding: 24,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  modalDescription: {
+    fontSize: 13,
+    color: '#A0A0A0',
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  modalInput: {
+    backgroundColor: '#121212',
+    borderWidth: 1,
+    borderColor: '#2C2C2C',
+    borderRadius: 12,
+    padding: 16,
+    color: '#FFFFFF',
+    fontSize: 14,
+    height: 150,
+    textAlignVertical: 'top',
+    marginBottom: 20,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  modalBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    marginLeft: 12,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  cancelBtn: {
+    backgroundColor: '#2C2C2C',
+  },
+  cancelBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  saveBtn: {
+    backgroundColor: '#00F5FF',
+  },
+  saveBtnText: {
+    color: '#000000',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
