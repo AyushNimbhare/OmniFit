@@ -24,9 +24,15 @@ const QUICK_QUESTIONS = [
 
 export default function AICoachScreen() {
   const queryClient = useQueryClient();
+  
   const { data: memoryData, isLoading: loadingMemory } = useQuery({
     queryKey: ['coachMemory'],
     queryFn: coachService.getMemory
+  });
+
+  const { data: historyData, isLoading: loadingHistory } = useQuery({
+    queryKey: ['coachHistory'],
+    queryFn: coachService.getChatHistory
   });
 
   const updateMemoryMutation = useMutation({
@@ -34,6 +40,30 @@ export default function AICoachScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['coachMemory'] });
       setShowEditModal(false);
+    }
+  });
+
+  const sendMutation = useMutation({
+    mutationFn: coachService.chatWithCoach,
+    onMutate: async (messageText) => {
+      await queryClient.cancelQueries({ queryKey: ['coachHistory'] });
+      const previousHistory = queryClient.getQueryData<Message[]>(['coachHistory']);
+      
+      queryClient.setQueryData<Message[]>(['coachHistory'], (old) => [
+        ...(old || []),
+        { id: Date.now().toString(), role: 'user', content: messageText }
+      ]);
+      
+      return { previousHistory };
+    },
+    onError: (err, messageText, context) => {
+      if (context?.previousHistory) {
+        queryClient.setQueryData(['coachHistory'], context.previousHistory);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['coachHistory'] });
+      queryClient.invalidateQueries({ queryKey: ['coachMemory'] });
     }
   });
 
@@ -50,70 +80,31 @@ export default function AICoachScreen() {
     updateMemoryMutation.mutate(editText);
   };
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content: "Hello! I am your OmniFit Coach. 🧠 I analyze what you lift, what you eat, and how your body weight changes to give you elite-level advice. Ask me anything, or tap one of the quick questions below to get started!"
-    }
-  ]);
+  const welcomeMessage: Message = {
+    id: 'welcome',
+    role: 'assistant',
+    content: "Hello! I am your OmniFit Coach. 🧠 I analyze what you lift, what you eat, and how your body weight changes to give you elite-level advice. Ask me anything, or tap one of the quick questions below to get started!"
+  };
+
+  const messages = [welcomeMessage, ...(historyData || [])];
   const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
   
+  const loading = sendMutation.isPending;
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // Auto scroll to bottom when messages list changes
+  // Auto scroll to bottom when a new message is added (not on initial mount)
   useEffect(() => {
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 100);
+    if (messages.length > 1 || loading) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
   }, [messages, loading]);
 
-  const handleSendMessage = async (textToSend: string) => {
-    if (!textToSend.trim()) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: textToSend.trim()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+  const handleSendMessage = (textToSend: string) => {
+    if (!textToSend.trim() || sendMutation.isPending) return;
+    sendMutation.mutate(textToSend.trim());
     setInput('');
-    setLoading(true);
-
-    try {
-      // Filter previous messages (limit to last 6 for token efficiency)
-      const chatHistory = messages
-        .filter(m => m.id !== 'welcome')
-        .slice(-6)
-        .map(m => ({
-          role: m.role,
-          content: m.content
-        }));
-
-      // Call API
-      const coachResponse = await coachService.chatWithCoach(userMessage.content, chatHistory);
-
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: coachResponse
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
-      queryClient.invalidateQueries({ queryKey: ['coachMemory'] });
-    } catch (e) {
-      console.error(e);
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: "I'm having trouble connecting to my database right now. Please make sure the OmniFit backend server is running locally and try again!"
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
@@ -149,7 +140,7 @@ export default function AICoachScreen() {
             activeOpacity={0.7}
           >
             <View style={styles.memoryHeaderLeft}>
-              <Ionicons name="brain" size={18} color="#00F5FF" style={{ marginRight: 8 }} />
+              <Ionicons name="bulb-outline" size={18} color="#00F5FF" style={{ marginRight: 8 }} />
               <Text style={styles.memoryTitle}>Coach Memory</Text>
             </View>
             <View style={styles.memoryHeaderRight}>

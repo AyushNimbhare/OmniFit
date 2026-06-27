@@ -167,10 +167,18 @@ export const coachService = {
     const res = await api.get('/api/coach/insights');
     return res.data;
   },
-  chatWithCoach: async (message: string, history: { role: string; content: string }[]): Promise<string> => {
+  getChatHistory: async (): Promise<{ id: string; role: 'user' | 'assistant'; content: string }[]> => {
+    const res = await api.get('/api/coach/history');
+    return res.data.map((msg: any) => ({
+      id: msg.id.toString(),
+      role: msg.role,
+      content: msg.content
+    }));
+  },
+  chatWithCoach: async (message: string): Promise<string> => {
     const res = await api.post('/api/coach/chat', {
       message,
-      history,
+      history: [],
     });
     return res.data.response;
   },
