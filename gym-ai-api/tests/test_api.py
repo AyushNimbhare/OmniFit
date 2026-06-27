@@ -221,3 +221,38 @@ def test_coach_memory(client):
     assert "response" in chat_data
     assert "updated_memory" in chat_data
     assert "plant-based diet" in chat_data["updated_memory"]
+
+def test_coach_chat_history(client):
+    # Sync User
+    uid = "bypass-Test_User-tester_at_example_dot_com"
+    client.post("/api/auth/sync", json={
+        "email": "tester@example.com",
+        "name": "Test User",
+        "firebase_uid": uid
+    })
+    headers = {"Authorization": f"Bearer {uid}"}
+
+    # 1. Check history initially empty
+    res_hist = client.get("/api/coach/history", headers=headers)
+    assert res_hist.status_code == 200
+    assert len(res_hist.json()) == 0
+
+    # 2. Send a chat message
+    chat_payload = {
+        "message": "Hello Coach! How can I lose fat?",
+        "history": []
+    }
+    res_chat = client.post("/api/coach/chat", headers=headers, json=chat_payload)
+    assert res_chat.status_code == 200
+    
+    # 3. Retrieve history again, should contain 2 messages
+    res_hist2 = client.get("/api/coach/history", headers=headers)
+    assert res_hist2.status_code == 200
+    history_data = res_hist2.json()
+    assert len(history_data) == 2
+    
+    assert history_data[0]["role"] == "user"
+    assert history_data[0]["content"] == "Hello Coach! How can I lose fat?"
+    
+    assert history_data[1]["role"] == "assistant"
+    assert history_data[1]["content"] == res_chat.json()["response"]

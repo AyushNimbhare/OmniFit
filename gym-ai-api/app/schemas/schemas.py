@@ -126,3 +126,12 @@ class UserMemoryResponse(BaseModel):
 
 class UserMemoryUpdate(BaseModel):
     content: str
+
+class CoachMessageResponse(BaseModel):
+    id: int
+    user_id: int
+    role: str
+    content: str
+    created_at: datetime
+    class Config:
+        from_attributes = True

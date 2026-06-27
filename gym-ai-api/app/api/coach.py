@@ -2,8 +2,8 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
 from app.db.database import get_session
-from app.models.models import User, Workout, WorkoutLog, NutritionLog, BodyMetric, AIInsight, UserMemory
-from app.schemas.schemas import AIInsightResponse, UserMemoryResponse, UserMemoryUpdate
+from app.models.models import User, Workout, WorkoutLog, NutritionLog, BodyMetric, AIInsight, UserMemory, CoachMessage
+from app.schemas.schemas import AIInsightResponse, UserMemoryResponse, UserMemoryUpdate, CoachMessageResponse
 from app.api.auth import get_current_user
 from app.services import ai_service
 
@@ -147,6 +147,21 @@ class ChatRequest(BaseModel):
     message: str
     history: List[ChatMessage] = []
 
+@router.get("/history", response_model=List[CoachMessageResponse])
+def get_chat_history(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Retrieve the persistent chat history of the user, ordered chronologically.
+    """
+    messages = session.exec(
+        select(CoachMessage)
+        .where(CoachMessage.user_id == current_user.id)
+        .order_by(CoachMessage.created_at.asc())
+    ).all()
+    return messages
+
 @router.get("/memory", response_model=UserMemoryResponse)
 def get_memory(
     session: Session = Depends(get_session),
@@ -239,10 +254,40 @@ def chat_with_coach(
         session.commit()
         session.refresh(memory)
         
-    # Format history for the AI service
-    hist_dicts = [{"role": msg.role, "content": msg.content} for msg in request.history]
+    # Fetch last 6 messages from database as history
+    db_history = session.exec(
+        select(CoachMessage)
+        .where(CoachMessage.user_id == current_user.id)
+        .order_by(CoachMessage.created_at.desc())
+        .limit(6)
+    ).all()
+    # Reverse to restore chronological order
+    db_history.reverse()
+    hist_dicts = [{"role": msg.role, "content": msg.content} for msg in db_history]
     
+    # Save the incoming user message
+    user_msg = CoachMessage(
+        user_id=current_user.id,
+        role="user",
+        content=request.message,
+        created_at=datetime.utcnow()
+    )
+    session.add(user_msg)
+    session.commit()
+    
+    # Call AI Service
     ai_result = ai_service.chat_with_coach(request.message, hist_dicts, context, memory.content)
+    response_text = ai_result.get("response", "")
+    
+    # Save assistant response
+    assistant_msg = CoachMessage(
+        user_id=current_user.id,
+        role="assistant",
+        content=response_text,
+        created_at=datetime.utcnow()
+    )
+    session.add(assistant_msg)
+    session.commit()
     
     # Save the updated memory if it was returned
     updated_memory = ai_result.get("updated_memory", memory.content)
@@ -254,7 +299,7 @@ def chat_with_coach(
         session.refresh(memory)
         
     return {
-        "response": ai_result.get("response", ""),
+        "response": response_text,
         "updated_memory": memory.content
     }
 

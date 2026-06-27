@@ -86,3 +86,10 @@ class UserMemory(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id", index=True, unique=True)
     content: str = Field(default="")
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class CoachMessage(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    role: str = Field(...)  # 'user' or 'assistant'
+    content: str = Field(...)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
