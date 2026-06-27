@@ -4,9 +4,11 @@ import {
 } from '../types';
 
 // Dynamically resolve the backend URL depending on the browser environment
-let API_BASE_URL = 'http://192.168.1.33:8000';
+let API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.33:8000';
 
-if (typeof window !== 'undefined') {
+if (process.env.EXPO_PUBLIC_API_URL) {
+  API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
+} else if (typeof window !== 'undefined') {
   const { hostname, port, origin } = window.location;
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     if (port === '8081') {
