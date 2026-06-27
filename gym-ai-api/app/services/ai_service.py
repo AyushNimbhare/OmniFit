@@ -288,8 +288,7 @@ def chat_with_coach(message: str, history: list, context: str, current_memory: s
             
             payload = {
                 "model": openrouter_model,
-                "messages": messages,
-                "response_format": {"type": "json_object"}
+                "messages": messages
             }
             
             response = requests.post(
