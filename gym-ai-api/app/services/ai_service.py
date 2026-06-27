@@ -11,6 +11,37 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 # Configure Gemini
+def extract_json_from_text(text: str) -> Optional[dict]:
+    """
+    Attempts to parse JSON directly, or extract it from a text block
+    containing markdown code fences or conversational prefixes.
+    """
+    text_clean = text.strip()
+    if text_clean.startswith("```json"):
+        text_clean = text_clean[7:]
+    elif text_clean.startswith("```"):
+        text_clean = text_clean[3:]
+    if text_clean.endswith("```"):
+        text_clean = text_clean[:-3]
+    text_clean = text_clean.strip()
+    
+    try:
+        return json.loads(text_clean)
+    except Exception:
+        pass
+        
+    try:
+        start_idx = text.find('{')
+        end_idx = text.rfind('}')
+        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+            json_candidate = text[start_idx:end_idx + 1]
+            return json.loads(json_candidate)
+    except Exception:
+        pass
+        
+    return None
+
+# Configure Gemini
 api_key = os.getenv("GEMINI_API_KEY")
 if api_key:
     genai.configure(api_key=api_key)
@@ -302,8 +333,8 @@ def chat_with_coach(message: str, history: list, context: str, current_memory: s
             raw_content = data["choices"][0]["message"]["content"].strip()
             
             try:
-                res_data = json.loads(raw_content)
-                if "response" in res_data and "updated_memory" in res_data:
+                res_data = extract_json_from_text(raw_content)
+                if res_data and "response" in res_data and "updated_memory" in res_data:
                     return res_data
                 return {"response": raw_content, "updated_memory": current_memory}
             except Exception as pe:
@@ -340,8 +371,8 @@ def chat_with_coach(message: str, history: list, context: str, current_memory: s
                     )
                     raw_content = resp.text.strip()
                     try:
-                        res_data = json.loads(raw_content)
-                        if "response" in res_data and "updated_memory" in res_data:
+                        res_data = extract_json_from_text(raw_content)
+                        if res_data and "response" in res_data and "updated_memory" in res_data:
                             return res_data
                         return {"response": raw_content, "updated_memory": current_memory}
                     except Exception as pe:
@@ -384,8 +415,8 @@ def chat_with_coach(message: str, history: list, context: str, current_memory: s
             )
             raw_content = resp.text.strip()
             try:
-                res_data = json.loads(raw_content)
-                if "response" in res_data and "updated_memory" in res_data:
+                res_data = extract_json_from_text(raw_content)
+                if res_data and "response" in res_data and "updated_memory" in res_data:
                     return res_data
                 return {"response": raw_content, "updated_memory": current_memory}
             except Exception as pe:
