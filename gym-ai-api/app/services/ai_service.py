@@ -312,6 +312,7 @@ def chat_with_coach(message: str, history: list, context: str, current_memory: s
             
         except Exception as e:
             logger.error(f"Error in chat_with_coach (OpenRouter): {e}")
+            error_details = f"OpenRouter Error: {str(e)}"
             if api_key:
                 try:
                     model = genai.GenerativeModel("gemini-2.5-flash")
@@ -348,7 +349,13 @@ def chat_with_coach(message: str, history: list, context: str, current_memory: s
                         return {"response": raw_content, "updated_memory": current_memory}
                 except Exception as ge:
                     logger.error(f"Gemini fallback chat also failed: {ge}")
-            return get_simulated_chat_response(message, context, current_memory)
+                    error_details += f" | Gemini Fallback Error: {str(ge)}"
+            else:
+                error_details += " | Gemini API key not found in environment."
+                
+            sim_res = get_simulated_chat_response(message, context, current_memory)
+            sim_res["response"] = f"⚠️ **Debug Info (LLM Call Failed):**\n`{error_details}`\n\n{sim_res['response']}"
+            return sim_res
 
     if api_key:
         try:
@@ -387,9 +394,13 @@ def chat_with_coach(message: str, history: list, context: str, current_memory: s
             
         except Exception as e:
             logger.error(f"Error in chat_with_coach (Gemini): {e}")
-            return get_simulated_chat_response(message, context, current_memory)
+            sim_res = get_simulated_chat_response(message, context, current_memory)
+            sim_res["response"] = f"⚠️ **Debug Info (LLM Call Failed):**\n`Gemini Error: {str(e)}`\n\n{sim_res['response']}"
+            return sim_res
             
-    return get_simulated_chat_response(message, context, current_memory)
+    sim_res = get_simulated_chat_response(message, context, current_memory)
+    sim_res["response"] = f"⚠️ **Debug Info (LLM Call Failed):**\n`No API keys configured in environment (OPENROUTER_API_KEY or GEMINI_API_KEY is missing)`\n\n{sim_res['response']}"
+    return sim_res
 
 def get_simulated_chat_response(message: str, context: str, current_memory: str) -> dict:
     """
