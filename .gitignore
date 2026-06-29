@@ -21,3 +21,5 @@ gym-ai-mobile/expo-env.d.ts
 gym-ai-mobile/.env*
 gym-ai-mobile/ios/
 gym-ai-mobile/android/
+.vercel
+.env*
